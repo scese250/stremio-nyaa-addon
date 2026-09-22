@@ -102,6 +102,7 @@ function matchesWithoutCrc(torrentTitle, episode) {
  */
 export async function searchTorrents({
   title,
+  originalTitle,
   englishTitle,
   synonyms = [],
   season = 1,
@@ -111,44 +112,42 @@ export async function searchTorrents({
   strictGroup = false
 }) {
   const cleanTitle = sanitizeTitle(title);
+  const cleanOrigTitle = sanitizeTitle(originalTitle);
   const cleanEngTitle = sanitizeTitle(englishTitle);
   const paddedEp = episode ? String(episode).padStart(2, '0') : null;
+
+  // Colección de títulos únicos a probar
+  const candidateTitles = [];
+  if (cleanTitle) candidateTitles.push(cleanTitle);
+  if (cleanOrigTitle && !candidateTitles.includes(cleanOrigTitle)) candidateTitles.push(cleanOrigTitle);
+  if (cleanEngTitle && !candidateTitles.includes(cleanEngTitle)) candidateTitles.push(cleanEngTitle);
 
   // Lista de términos de búsqueda en orden de relevancia
   const searchQueries = [];
 
   if (episode) {
-    // Si es una temporada superior a 1 (ej: Temporada 2, 3, 4...)
-    if (season && season > 1) {
-      const ordinal = getOrdinal(season); // ej: "2nd", "3rd", "4th"
-      // 1. Título Romaji + Ordinal Season + Ep (ej: "Mairimashita Iruma kun 3rd Season 23")
-      searchQueries.push(`${cleanTitle} ${ordinal} Season ${paddedEp}`);
-      searchQueries.push(`${cleanTitle} S${season} ${paddedEp}`);
-      searchQueries.push(`${cleanTitle} Season ${season} ${paddedEp}`);
-      searchQueries.push(`${cleanTitle} ${season} ${paddedEp}`);
-    }
-
-    // Búsqueda estándar: Título Romaji + Episodio (ej: "Mairimashita Iruma kun 23")
-    searchQueries.push(`${cleanTitle} ${paddedEp}`);
-    searchQueries.push(`${cleanTitle} ${episode}`);
-
-    // Si tiene título en inglés alternativo
-    if (cleanEngTitle && cleanEngTitle !== cleanTitle) {
-      searchQueries.push(`${cleanEngTitle} ${paddedEp}`);
+    for (const t of candidateTitles) {
+      if (season && season > 1) {
+        const ordinal = getOrdinal(season);
+        searchQueries.push(`${t} ${ordinal} Season ${paddedEp}`);
+        searchQueries.push(`${t} S${season} ${paddedEp}`);
+        searchQueries.push(`${t} Season ${season} ${paddedEp}`);
+      }
+      searchQueries.push(`${t} ${paddedEp}`);
+      searchQueries.push(`${t} ${episode}`);
     }
 
     // Sinónimos adicionales (si existen)
     for (const syn of synonyms.slice(0, 2)) {
       const cleanSyn = sanitizeTitle(syn);
-      if (cleanSyn && cleanSyn !== cleanTitle && cleanSyn !== cleanEngTitle) {
+      if (cleanSyn && !candidateTitles.includes(cleanSyn)) {
         searchQueries.push(`${cleanSyn} ${paddedEp}`);
       }
     }
   } else {
     // Películas
-    searchQueries.push(cleanTitle);
-    if (cleanEngTitle && cleanEngTitle !== cleanTitle) {
-      searchQueries.push(cleanEngTitle);
+    for (const t of candidateTitles) {
+      searchQueries.push(t);
     }
   }
 

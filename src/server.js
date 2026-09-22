@@ -122,6 +122,7 @@ async function handleStream(req, res) {
 
     const streams = await searchTorrents({
       title: animeInfo.title,
+      originalTitle: animeInfo.originalTitle,
       englishTitle: animeInfo.englishTitle,
       synonyms: animeInfo.synonyms,
       season: animeInfo.season,

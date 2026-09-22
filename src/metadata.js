@@ -19,6 +19,7 @@ async function translateToRomaji(englishTitle) {
       Media(search: $search, type: ANIME) {
         id
         idMal
+        countryOfOrigin
         title {
           romaji
           english
@@ -51,9 +52,12 @@ async function translateToRomaji(englishTitle) {
     const media = json?.data?.Media;
     if (!media) return null;
 
+    const isJapanese = media.countryOfOrigin === 'JP';
+
     const result = {
+      isJapanese: isJapanese,
       romaji: media.title?.romaji || '',
-      english: media.title?.english || '',
+      english: media.title?.english || englishTitle,
       native: media.title?.native || '',
       synonyms: media.synonyms || [],
       idMal: media.idMal
@@ -62,7 +66,7 @@ async function translateToRomaji(englishTitle) {
     cache.set(cacheKey, result);
     return result;
   } catch (err) {
-    console.error(`[AniList] Error al traducir a Romaji: ${err.message}`);
+    console.error(`[AniList] Error al consultar metadatos: ${err.message}`);
     return null;
   }
 }
@@ -163,15 +167,19 @@ export async function resolveAnimeInfo(type, fullId) {
     const cinemetaInfo = await getTitleFromCinemeta(type, imdbId);
     const rawEnglishTitle = cinemetaInfo?.name || '';
 
-    // Convertir el título de inglés a Romaji japonés con AniList
+    // Consultar metadatos (origen y traducciones)
     const translated = await translateToRomaji(rawEnglishTitle);
 
-    const romajiTitle = translated?.romaji || rawEnglishTitle;
-    const englishTitle = translated?.english || rawEnglishTitle;
+    // Si es japonesa nativa, usamos Romaji como título principal; si no, dejamos el original en inglés
+    const isJp = translated?.isJapanese ?? true;
+    const primaryTitle = (isJp && translated?.romaji) ? translated.romaji : rawEnglishTitle;
+    const secondaryTitle = rawEnglishTitle;
 
     return {
-      title: romajiTitle,
-      englishTitle: englishTitle,
+      title: primaryTitle,
+      originalTitle: rawEnglishTitle,
+      romajiTitle: translated?.romaji || '',
+      englishTitle: secondaryTitle,
       synonyms: translated?.synonyms || [],
       season: season,
       episode: episode
