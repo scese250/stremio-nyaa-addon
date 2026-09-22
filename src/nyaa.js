@@ -82,6 +82,22 @@ function extractResolution(title) {
 }
 
 /**
+ * Descarta torrents donde el número de episodio solo coincidió porque estaba dentro del hash CRC32
+ */
+function matchesWithoutCrc(torrentTitle, episode) {
+  if (episode === null || episode === undefined) return true;
+
+  // Eliminar únicamente el CRC32 (8 caracteres hexadecimales entre corchetes, ej: [A13B45C6])
+  const titleWithoutCrc = torrentTitle.replace(/\[[0-9a-fA-F]{8}\]/gi, '');
+
+  const epNum = parseInt(episode, 10);
+  // Verifica si el número de episodio (ej: 13 o 013) sigue existiendo fuera del CRC
+  const regex = new RegExp(`\\b0*${epNum}\\b`, 'i');
+
+  return regex.test(titleWithoutCrc);
+}
+
+/**
  * Busca torrents en Nyaa aplicando filtros de Grupo y Resolución
  */
 export async function searchTorrents({
@@ -155,6 +171,12 @@ export async function searchTorrents({
   }
 
   console.log(`📦 [Nyaa Encontrados]: ${allTorrents.length} torrents brutos antes de filtrar`);
+
+  // 1. FILTRADO CRC32: descartar torrents donde el episodio solo coincidió por el hash CRC32
+  if (episode !== null && episode !== undefined) {
+    allTorrents = allTorrents.filter(t => matchesWithoutCrc(t.title, episode));
+    console.log(`🎯 [Filtro CRC32]: ${allTorrents.length} torrents válidos para el episodio ${episode}`);
+  }
 
   // Filtrado por Resolución
   let filteredByRes = allTorrents;
