@@ -3,11 +3,46 @@ import NodeCache from 'node-cache';
 // Guardar títulos en caché por 24 horas para respuestas instantáneas
 const cache = new NodeCache({ stdTTL: 86400, checkperiod: 3600 });
 
+// Instancia de Jikan en Cloudflare Workers (rápida, sin 504, con paridad completa de MyAnimeList)
+const JIKAN_EDGE_BASE = 'https://jikan.lucashdo.com/v1';
+
 /**
- * Traduce cualquier título en inglés a Romaji y Japonés usando AniList GraphQL
- * (Es ultra rápida, sin límites agresivos y 100% confiable, a diferencia de Jikan que suele dar 504)
+ * Consulta la base de datos de MyAnimeList a través de jikan-edge
  */
-async function translateToRomaji(englishTitle) {
+async function searchMyAnimeList(query) {
+  if (!query || query.trim() === '') return [];
+
+  const cacheKey = `jikan_search_${query.toLowerCase().trim()}`;
+  const cached = cache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const url = `${JIKAN_EDGE_BASE}/anime?q=${encodeURIComponent(query)}`;
+    const res = await fetch(url, {
+      headers: {
+        'Accept': 'application/json'
+      }
+    });
+
+    if (!res.ok) {
+      console.warn(`[Jikan-Edge] Error HTTP ${res.status}`);
+      return [];
+    }
+
+    const json = await res.json();
+    const results = json?.data || [];
+    cache.set(cacheKey, results);
+    return results;
+  } catch (err) {
+    console.error(`[Jikan-Edge] Error al consultar: ${err.message}`);
+    return [];
+  }
+}
+
+/**
+ * Traduce usando AniList como respaldo si MAL no da resultado
+ */
+async function searchAniList(englishTitle) {
   if (!englishTitle) return null;
 
   const cacheKey = `anilist_${englishTitle.toLowerCase().trim()}`;
@@ -18,7 +53,6 @@ async function translateToRomaji(englishTitle) {
     query ($search: String) {
       Media(search: $search, type: ANIME) {
         id
-        idMal
         countryOfOrigin
         title {
           romaji
@@ -43,30 +77,21 @@ async function translateToRomaji(englishTitle) {
       })
     });
 
-    if (!res.ok) {
-      console.warn(`[AniList] Error HTTP ${res.status}`);
-      return null;
-    }
-
+    if (!res.ok) return null;
     const json = await res.json();
     const media = json?.data?.Media;
     if (!media) return null;
 
-    const isJapanese = media.countryOfOrigin === 'JP';
-
     const result = {
-      isJapanese: isJapanese,
+      isJapanese: media.countryOfOrigin === 'JP',
       romaji: media.title?.romaji || '',
       english: media.title?.english || englishTitle,
-      native: media.title?.native || '',
-      synonyms: media.synonyms || [],
-      idMal: media.idMal
+      synonyms: media.synonyms || []
     };
 
     cache.set(cacheKey, result);
     return result;
-  } catch (err) {
-    console.error(`[AniList] Error al consultar metadatos: ${err.message}`);
+  } catch {
     return null;
   }
 }
@@ -139,7 +164,7 @@ export async function getTitleFromCinemeta(type, imdbId) {
 }
 
 /**
- * Resuelve cualquier ID de Stremio (Kitsu o IMDb) y lo convierte en el título oficial en Romaji / Japonés
+ * Resuelve cualquier ID de Stremio combinando MyAnimeList (jikan-edge), Kitsu y AniList
  */
 export async function resolveAnimeInfo(type, fullId) {
   // Caso 1: ID de Kitsu (ej: "kitsu:42898:3")
@@ -151,6 +176,7 @@ export async function resolveAnimeInfo(type, fullId) {
     const info = await getAnimeTitleFromKitsu(kitsuId);
     return {
       title: info?.romajiTitle || '',
+      originalTitle: info?.englishTitle || info?.romajiTitle || '',
       englishTitle: info?.englishTitle || '',
       episode: episode,
       season: 1
@@ -167,20 +193,51 @@ export async function resolveAnimeInfo(type, fullId) {
     const cinemetaInfo = await getTitleFromCinemeta(type, imdbId);
     const rawEnglishTitle = cinemetaInfo?.name || '';
 
-    // Consultar metadatos (origen y traducciones)
-    const translated = await translateToRomaji(rawEnglishTitle);
+    // 1. Consultar MyAnimeList directamente a través de jikan-edge
+    const malResults = await searchMyAnimeList(rawEnglishTitle);
 
-    // Si es japonesa nativa, usamos Romaji como título principal; si no, dejamos el original en inglés
-    const isJp = translated?.isJapanese ?? true;
-    const primaryTitle = (isJp && translated?.romaji) ? translated.romaji : rawEnglishTitle;
-    const secondaryTitle = rawEnglishTitle;
+    let chosenMalTitle = null;
+    let malSynonyms = [];
+
+    if (malResults.length > 0) {
+      // Si se especificó una temporada (ej: Temp 4, 3, 2), buscar la entrada exacta en MAL
+      if (season > 1) {
+        const seasonPatterns = [
+          new RegExp(`(?:${season}nd|${season}rd|${season}th|${season}st)\\s*Season`, 'i'),
+          new RegExp(`Season\\s*${season}`, 'i'),
+          new RegExp(`S${season}`, 'i')
+        ];
+
+        for (const pattern of seasonPatterns) {
+          const match = malResults.find(item => pattern.test(item.title));
+          if (match) {
+            chosenMalTitle = match.title;
+            break;
+          }
+        }
+      }
+
+      // Si no hay temporada específica o no coincidió, tomar el primer resultado más relevante
+      if (!chosenMalTitle) {
+        chosenMalTitle = malResults[0].title;
+      }
+
+      malSynonyms = malResults.slice(0, 3).map(r => r.title);
+    }
+
+    // 2. Respaldo opcional con AniList si MAL no devolvió nada
+    let aniInfo = null;
+    if (!chosenMalTitle) {
+      aniInfo = await searchAniList(rawEnglishTitle);
+    }
+
+    const finalRomaji = chosenMalTitle || aniInfo?.romaji || rawEnglishTitle;
 
     return {
-      title: primaryTitle,
+      title: finalRomaji,
       originalTitle: rawEnglishTitle,
-      romajiTitle: translated?.romaji || '',
-      englishTitle: secondaryTitle,
-      synonyms: translated?.synonyms || [],
+      englishTitle: rawEnglishTitle,
+      synonyms: malSynonyms,
       season: season,
       episode: episode
     };
