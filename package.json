@@ -1,0 +1,25 @@
+{
+  "name": "stremio-mal-nyaa-addon",
+  "version": "1.0.0",
+  "description": "Stremio Addon Todo en 1: Catálogo MyAnimeList (Jikan v4) + Streams Nyaa Torrents con filtro de Grupo y Resolución",
+  "main": "src/server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "cors": "^2.8.5",
+    "fast-xml-parser": "^4.5.0",
+    "node-cache": "^5.1.2"
+  },
+  "keywords": [
+    "stremio",
+    "stremio-addon",
+    "myanimelist",
+    "nyaa",
+    "anime"
+  ],
+  "author": "",
+  "license": "MIT"
+}

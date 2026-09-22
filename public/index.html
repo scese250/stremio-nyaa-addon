@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración | MAL + Nyaa Torrents para Stremio</title>
+  <style>
+    :root {
+      --bg-color: #0f141c;
+      --card-bg: #182232;
+      --accent: #2e51a2; /* Color de MyAnimeList */
+      --accent-hover: #3f68cc;
+      --text: #e2e8f0;
+      --text-muted: #94a3b8;
+      --border: #2b394f;
+      --success: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 520px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    .badge {
+      display: inline-block;
+      background: rgba(46, 81, 162, 0.3);
+      color: #729bff;
+      padding: 0.35rem 0.8rem;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      border: 1px solid rgba(114, 155, 255, 0.2);
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 0.5rem;
+      color: #fff;
+    }
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .hint {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      margin-top: 0.35rem;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #0d121a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus, select:focus {
+      outline: none;
+      border-color: var(--accent-hover);
+    }
+
+    .tag-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    .pill {
+      background: #233044;
+      border: 1px solid var(--border);
+      color: #cbd5e1;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s;
+    }
+
+    .pill:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      margin-top: 2rem;
+    }
+
+    .btn {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    .btn-secondary {
+      background: #233044;
+      color: #e2e8f0;
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      background: #2d3e57;
+    }
+
+    .url-preview {
+      background: #0b0f16;
+      padding: 0.75rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      font-family: monospace;
+      font-size: 0.75rem;
+      color: #7dd3fc;
+      word-break: break-all;
+      margin-top: 1rem;
+    }
+
+    .copied-toast {
+      display: none;
+      text-align: center;
+      color: var(--success);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <span class="badge">Plugin de Streams P2P</span>
+      <h1>Nyaa Torrents Anime</h1>
+      <p class="subtitle">Encuentra torrents de Nyaa filtrados por grupo y resolución. Compatible automáticamente con tus catálogos de Stremio (Kitsu, Cinemeta, etc.).</p>
+    </div>
+
+    <form id="configForm" onsubmit="return false;">
+      <div class="form-group">
+        <label for="preferredGroup">Grupo de Fansub preferido:</label>
+        <input type="text" id="preferredGroup" placeholder="Ej: SubsPlease, Erai-raws, Judee...">
+        <div class="hint">Haz clic en uno de los grupos sugeridos para seleccionarlo rápido:</div>
+        <div class="tag-container">
+          <span class="pill" onclick="setGroup('SubsPlease')">SubsPlease</span>
+          <span class="pill" onclick="setGroup('Erai-raws')">Erai-raws</span>
+          <span class="pill" onclick="setGroup('Judee')">Judee</span>
+          <span class="pill" onclick="setGroup('PuyaSubs!')">PuyaSubs!</span>
+          <span class="pill" onclick="setGroup('Golumpa')">Golumpa</span>
+          <span class="pill" onclick="setGroup('')">Cualquiera</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="resolution">Resolución deseada:</label>
+        <select id="resolution">
+          <option value="1080p" selected>1080p (FHD)</option>
+          <option value="720p">720p (HD)</option>
+          <option value="480p">480p (SD)</option>
+          <option value="all">Todas las resoluciones</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="filterMode">Modo de filtrado de Grupo:</label>
+        <select id="filterMode">
+          <option value="priority" selected>Prioritario (Recomendado: mi grupo con ⭐ primero, otros abajo como alternativa)</option>
+          <option value="strict">Estricto (Solo mostrar resultados de mi grupo elegido)</option>
+        </select>
+        <div class="hint">El modo prioritario evita que te quedes sin resultados si tu grupo favorito aún no ha sacado el capítulo.</div>
+      </div>
+
+      <div class="btn-group">
+        <a id="installBtn" href="#" class="btn btn-primary">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Instalar en Stremio
+        </a>
+        <button type="button" class="btn btn-secondary" onclick="copyManifestUrl()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/></svg>
+          Copiar enlace para Android
+        </button>
+      </div>
+
+      <div class="url-preview" id="urlPreview">Cargando enlace...</div>
+      <div class="copied-toast" id="toast">¡Enlace copiado al portapapeles!</div>
+    </form>
+  </div>
+
+  <script>
+    const groupInput = document.getElementById('preferredGroup');
+    const resInput = document.getElementById('resolution');
+    const modeInput = document.getElementById('filterMode');
+    const installBtn = document.getElementById('installBtn');
+    const urlPreview = document.getElementById('urlPreview');
+    const toast = document.getElementById('toast');
+
+    function setGroup(name) {
+      groupInput.value = name;
+      updateUrl();
+    }
+
+    function getManifestUrl() {
+      const configObj = {
+        group: groupInput.value.trim(),
+        resolution: resInput.value,
+        strict: modeInput.value === 'strict'
+      };
+
+      const jsonStr = JSON.stringify(configObj);
+      // Codificar en Base64 URL-safe (sin '/', '+', ni '=')
+      const base64Config = btoa(unescape(encodeURIComponent(jsonStr)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=+$/, '');
+
+      const host = window.location.host;
+      const protocol = window.location.protocol;
+      
+      return `${protocol}//${host}/${base64Config}/manifest.json`;
+    }
+
+    function updateUrl() {
+      const httpUrl = getManifestUrl();
+      const stremioUrl = httpUrl.replace(/^https?:\/\//i, 'stremio://');
+
+      installBtn.href = stremioUrl;
+      urlPreview.textContent = httpUrl;
+    }
+
+    function copyManifestUrl() {
+      const httpUrl = getManifestUrl();
+      navigator.clipboard.writeText(httpUrl).then(() => {
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 2500);
+      });
+    }
+
+    groupInput.addEventListener('input', updateUrl);
+    resInput.addEventListener('change', updateUrl);
+    modeInput.addEventListener('change', updateUrl);
+
+    // Inicializar
+    updateUrl();
+  </script>
+</body>
+</html>
